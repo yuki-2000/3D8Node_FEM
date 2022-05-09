@@ -544,16 +544,16 @@ for i in range(num_fix):
 
 #境界条件適用後の小行列を作成
 known_DOF   = np.empty(num_fix, dtype=np.int32)              #既知節点変位ベクトルの自由度  #既知接点変位の行番号であり、未知荷重行に対応
-unknown_DOF = np.empty(2*num_node - num_fix, dtype=np.int32) #未知節点変位ベクトルの自由度
+unknown_DOF = np.empty(3*num_node - num_fix, dtype=np.int32) #未知節点変位ベクトルの自由度
 
-K11 = np.zeros((2*num_node-num_fix, 2*num_node-num_fix), dtype=np.float64) #変位境界条件付加後の小行列
-K12 = np.zeros((2*num_node-num_fix, num_fix), dtype=np.float64)            #変位境界条件付加後の小行列 #K21の転置
+K11 = np.zeros((3*num_node-num_fix, 3*num_node-num_fix), dtype=np.float64) #変位境界条件付加後の小行列
+K12 = np.zeros((3*num_node-num_fix, num_fix), dtype=np.float64)            #変位境界条件付加後の小行列 #K21の転置
 K22 = np.zeros((num_fix, num_fix), dtype=np.float64)                       #変位境界条件付加後の小行列
 
 
-F1  = np.zeros((2*num_node-num_fix), dtype=np.float64)                     #変位境界条件付加後の小行列 #与えられる
+F1  = np.zeros((3*num_node-num_fix), dtype=np.float64)                     #変位境界条件付加後の小行列 #与えられる
 F2  = np.zeros(num_fix, dtype=np.float64)                                  #変位境界条件付加後の小行列
-U1  = np.zeros((2*num_node-num_fix), dtype=np.float64)                     #変位境界条件付加後の小行列
+U1  = np.zeros((3*num_node-num_fix), dtype=np.float64)                     #変位境界条件付加後の小行列
 U2  = np.zeros(num_fix, dtype=np.float64)                                  #変位境界条件付加後の小行列　#与えられる
 
 
@@ -561,32 +561,15 @@ U2  = np.zeros(num_fix, dtype=np.float64)                                  #変�
 ##既知接点変位の行番号配列作成
 #pythonの配列番号0始まりに変更
 #各接点のx,yの順に配列が並んでいるので、xは+1、yは+2が割り振られうまく位置を計算している。
-known_DOF = 2*(fix_pnt[:,0]-1) + fix_pnt[:,1] -1
+known_DOF = 3*(fix_pnt[:,0]-1) + fix_pnt[:,1] -1
 
 
-"""
-#何やっているかわからないが、おそらく決まっていない行番号の一覧を作成
-DO j=1, known_DOF(1)-1
-  unknown_DOF(j) = j
-END DO
 
-
-DO i=2, NUM_FIX
-  DO j=known_DOF(i-1)+1, known_DOF(i)-1
-    unknown_DOF(j-(i-1)) = j
-  END DO
-END DO
-
-
-DO j=known_DOF(NUM_FIX)+1, 2*NUM_NODE
-  unknown_DOF(j-NUM_FIX) = j
-END DO
-"""
 
 
 #すべての行番号の中から、known_DOFの行番号のインデックスを削除
 #unknown_DOFのインデックスと値が一致しているためこう書くが、本質はknown_DOFの行番号の値を削除。
-unknown_DOF = np.array(range(2*num_node))
+unknown_DOF = np.array(range(3*num_node))
 unknown_DOF = np.delete(unknown_DOF, known_DOF)
         
 
