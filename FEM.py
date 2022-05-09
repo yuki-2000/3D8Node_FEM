@@ -761,23 +761,24 @@ lap_time = time.time()
 # distribution (NUM_NODE, NUM_ELEME, eleme, Bmat, Dmat, Umat)
 
 #念のため残しておく。
-AVEstrain = np.zeros((num_eleme,3), dtype=np.float64)  #各四角形の平均ひずみ(εx,εy,γxy)
-AVEstress = np.zeros((num_eleme,3), dtype=np.float64)  #各四角形の平均応力(σx,σy,τxy)
+AVEstrain = np.zeros((num_eleme,6), dtype=np.float64)  #各六面体の平均ひずみ(εx,εy,εz,γxy,γyz,γzx)
+AVEstress = np.zeros((num_eleme,6), dtype=np.float64)  #各六面体の平均応力(σx,σy,σz,τxy,τyz,τzx)
 
-GAUSSstrain = np.zeros((num_eleme,4,3), dtype=np.float64) #各ガウスの積分点におけるひずみ。四角形では要素内で一定でない。
-GAUSSstress = np.zeros((num_eleme,4,3), dtype=np.float64)
-NODALstrain = np.zeros((num_eleme,4,3), dtype=np.float64) #各節点におけるひずみ
-NODALstress = np.zeros((num_eleme,4,3), dtype=np.float64)
-Nmat        = np.zeros((4,4), dtype=np.float64)   #行:各積分点　列:各形状関数N　に対応した行列。
+GAUSSstrain = np.zeros((num_eleme,8,6), dtype=np.float64) #各ガウスの積分点におけるひずみ。六面体では要素内で一定でない。
+GAUSSstress = np.zeros((num_eleme,8,6), dtype=np.float64)
+NODALstrain = np.zeros((num_eleme,8,6), dtype=np.float64) #各節点におけるひずみ
+NODALstress = np.zeros((num_eleme,8,6), dtype=np.float64)
+Nmat        = np.zeros((8,8), dtype=np.float64)   #行:各積分点　列:各形状関数N　に対応した行列。
 
 
-e_Umat = np.empty(8, dtype=np.float64)               #ある四角形要素の変位
+e_Umat = np.empty(24, dtype=np.float64)               #ある六面体要素の変位
 
 
 for i in range(num_eleme):
-    for j in range(4): #四角形の4
-        e_Umat[2*j]   = Umat[2*(eleme[i,j]-1)]     #四角形要素のx変位
-        e_Umat[2*j+1] = Umat[2*(eleme[i,j]-1)+1]   #四角形要素のy変位
+    for j in range(8): #六面体の8
+        e_Umat[3*j]   = Umat[3*(eleme[i,j]-1)]     #六面体要素のx変位
+        e_Umat[3*j+1] = Umat[3*(eleme[i,j]-1)+1]   #六面体要素のy変位
+        e_Umat[3*j+2] = Umat[3*(eleme[i,j]-1)+2]   #六面体要素のz変位
         
     for j in range(len(gauss_nodes)): #各ガウスの積分点を代入した時
         GAUSSstrain[i,j,:] = Bmat[:,:,i,j] @ e_Umat
@@ -788,19 +789,19 @@ for i in range(num_eleme):
     for j in range(len(gauss_nodes)):
         AVEstrain[i,:] += GAUSSstrain[i,j,:]
         AVEstress[i,:] += GAUSSstress[i,j,:]
-    AVEstrain[i,:] /= 4
-    AVEstress[i,:] /= 4
+    AVEstrain[i,:] /= 8
+    AVEstress[i,:] /= 8
 
 
 
 #ガウスの積分点の形状関数と、ひずみ、応力から節点を求めている。
 #ひずみ、応力の要素内の分布は同じ形状関数なの？
 for i in range(num_eleme):
-    for j in range(3): #εx,εy、τxyの3
+    for j in range(6): #εx,εy,εz,γxy,γyz,γzxの6
         
         for k in range(len(gauss_nodes)):
-            for l in range(4): #形状関数4こ
-                Nmat[k,l] = 0.25 * (1 + polar[l,0] * gauss_nodes[k,0]) * (1 + polar[l,1] * gauss_nodes[k,1])
+            for l in range(8): #形状関数8こ
+                Nmat[k,l] = (1 + polar[l,0] * gauss_nodes[k,0]) * (1 + polar[l,1] * gauss_nodes[k,1]) * (1 + polar[l,2] * gauss_nodes[k,2]) /8
                 
         NODALstrain[i,:,j] = solve(Nmat, GAUSSstrain[i,:,j])
         NODALstress[i,:,j] = solve(Nmat, GAUSSstress[i,:,j])
