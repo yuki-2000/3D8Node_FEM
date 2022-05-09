@@ -476,18 +476,18 @@ lap_time = time.time()
 
 # makeFmat (NUM_NODE, NUM_FORCE, Fmat, force_pnt, force)
 
-Fmat = np.zeros((2*num_node), dtype=np.float64) #節点荷重ベクトル
+Fmat = np.zeros((3*num_node), dtype=np.float64) #節点荷重ベクトル
 
 #unknown_DOFをつかってファンシーインデックスにしたほうが早い
 for i in range(num_force):
     #force_pnt[i,1]は接点番号であり、pythonにおける配列位置にするために変更、
     #各接点のx,yの順に配列が並んでいるので、xは+1、yは+2が割り振られうまく位置を計算している。
     #pythonの配列番号0始まりに変更
-    Fmat[2*(force_pnt[i,0]-1) + force_pnt[i,1] -1] = force[i]
+    Fmat[3*(force_pnt[i,0]-1) + force_pnt[i,1] -1] = force[i]
     
-    if (force_pnt[i,1] != 1 and force_pnt[i,1] != 2):
+    if (force_pnt[i,1] != 1 and force_pnt[i,1] != 2 and force_pnt[i,1] != 3):
         print('INPUT DATA "input_forcednodes.txt" IS NOT APPROPREATE.')
-        print('load direction is now',force_pnt[i,2], ', not 1(x) or 2(y)' )
+        print('load direction is now',force_pnt[i,1], ', not 1(x) or 2(y) or 3(z)' )
         break
  
 
@@ -510,7 +510,7 @@ for i in range(num_force):
 
 
 
-Umat = np.zeros((2*num_node), dtype=np.float64)
+Umat = np.zeros((3*num_node), dtype=np.float64)
 
 
 #known_DOFをつかってファンシーインデックスにしたほうが早い
@@ -518,11 +518,11 @@ for i in range(num_fix):
     #fix_pnt[i,1]は接点番号であり、pythonにおける配列位置にするために変更、
     #各接点のx,yの順に配列が並んでいるので、xは+1、yは+2が割り振られうまく位置を計算している。
     #pythonの配列番号0始まりに変更
-    Umat[2*(fix_pnt[i,0]-1) + fix_pnt[i,1] -1] = fix[i]
+    Umat[3*(fix_pnt[i,0]-1) + fix_pnt[i,1] -1] = fix[i]
     
-    if (fix_pnt[i,1] != 1 and fix_pnt[i,1] != 2):
+    if (fix_pnt[i,1] != 1 and fix_pnt[i,1] != 2 and force_pnt[i,1] != 3):
         print('IINPUT DATA "input_fixednodes.txt" IS NOT APPROPREATE.')
-        print('Fixed direction is now', fix_pnt[i,2], ', not 1(x) or 2(y)' )
+        print('Fixed direction is now', fix_pnt[i,1], ', not 1(x) or 2(y) or 3(z)' )
         break
 
 
