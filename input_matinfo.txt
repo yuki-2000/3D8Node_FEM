@@ -1,0 +1,5 @@
+1                !CONSITION(plane stress status: 1, plane strain status: 2)
+1                !Material ID
+1                !mat_type(Isotropic Material: 1, Transversely Isotropic Material: 2)
+100.0d3           !Young's modulus [MPa]
+0.30d0             !Poisson ratio
