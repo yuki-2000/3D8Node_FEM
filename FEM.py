@@ -190,7 +190,7 @@ lap_time = time.time()
 #makeDmat (Dmat)
 
 #配列の初期化
-Dmat = np.zeros((3,3,num_material),dtype=np.float64) #弾性剛性マトリックス
+Dmat = np.zeros((6,6,num_material),dtype=np.float64) #弾性剛性マトリックス
 
 #最悪　めちゃくちゃわかりにくい
 #ちゃんとしたデータセット形式のinput作れ
@@ -201,15 +201,7 @@ line_num = 0
 with open('input_matinfo.txt') as f:
     l = f.readlines()
     
-    condition = int(l[0].split('!')[0]) #plane stress status: 1, plane strain status: 2
-    line_num += 1
-    if condition == 1:
-        print('PLANE STRESS CONDITION')
-    elif condition == 2:
-        print('PLANE STRAIN CONDITION')
-    else:
-        print('CONDITION IS NOT APPROPRIATE.')
-        
+      
         
         
     for k in range(num_material):
@@ -239,82 +231,24 @@ with open('input_matinfo.txt') as f:
             
             
             #配列がpythonでは0始まりなので[0,1]は1行2列、fortranでは[1,2]とかく。
-            if condition == 1: #平面応力
-                Dmat[0,0,k] = Young1 / (1 - (Poisson1 ** 2))
-                Dmat[0,1,k] = Young1 / (1 - (Poisson1 ** 2)) * Poisson1
-                Dmat[1,0,k] = Young1 / (1 - (Poisson1 ** 2)) * Poisson1
-                Dmat[1,1,k] = Young1 / (1 - (Poisson1 ** 2))
-                Dmat[2,2,k] = Young1 / (1 - (Poisson1 ** 2)) * (1- Poisson1) / 2
-            elif condition == 2: #平面ひずみ
-                Dmat[0,0,k] = Young1 * (1 - Poisson1) / (1 - 2 * Poisson1) / (1 + Poisson1)
-                Dmat[0,1,k] = Young1 / (1 - 2 * Poisson1) / (1 + Poisson1) * Poisson1
-                Dmat[1,0,k] = Young1 / (1 - 2 * Poisson1) / (1 + Poisson1) * Poisson1
-                Dmat[1,1,k] = Young1 * (1 - Poisson1) / (1 - 2 * Poisson1) / (1 + Poisson1)
-                Dmat[2,2,k] = Young1 / (1 + Poisson1) / 2
+            Dmat[0,0,k] = Young1 * (1 - Poisson1) / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[1,1,k] = Young1 * (1 - Poisson1) / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[2,2,k] = Young1 * (1 - Poisson1) / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[0,1,k] = Young1 * Poisson1 / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[1,0,k] = Young1 * Poisson1 / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[1,2,k] = Young1 * Poisson1 / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[2,1,k] = Young1 * Poisson1 / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[2,0,k] = Young1 * Poisson1 / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[0,2,k] = Young1 * Poisson1 / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[3,3,k] = Young1 / 2 / (1 + Poisson1)
+            Dmat[4,4,k] = Young1 / 2 / (1 + Poisson1)
+            Dmat[5,5,k] = Young1 / 2 / (1 + Poisson1)
         
         
         elif mat_type == 2: #Transeversely Isotropic Material　直交異方性材料、横等方性材料
             print('MATERIAL TYPE IS TRANSEVERSELY ISOTROPIC MATERIAL.')
-            
-            #Lを繊維軸方向，Tを繊維軸直交方向
-            if condition == 1:
-                Young1 = float(l[line_num].split('!')[0].replace('d','e')) #LL
-                line_num += 1
-                Young2= float(l[line_num].split('!')[0].replace('d','e')) #TT
-                line_num += 1
-                Poisson1= float(l[line_num].split('!')[0].replace('d','e')) #LT
-                line_num += 1
-                Poisson2= float(l[line_num].split('!')[0].replace('d','e')) #TL
-                line_num += 1
-                GL= float(l[line_num].split('!')[0].replace('d','e')) #LT
-                line_num += 1
-                
-                print('YOUNG''S MODULUS (LL) [MPa] :', Young1)
-                print('YOUNG''S MODULUS (TT) [MPa] :', Young2)
-                print('POISSON''S RATIO (LT) :', Poisson1)
-                print('POISSON''S RATIO (TL) :', Poisson2)
-                print('SHEAR MODULUS (LT) [MPa] :', GL)
-                
-                Young1 *= 10**6
-                Young2 *= 10**6
-                GL     *= 10**6
-                
-                #配列がpythonでは0始まりなので[0,1]は1行2列、fortranでは[1,2]とかく。
-                Dmat[0,0,k] = Young1 / (1 - Poisson1 * Poisson2)
-                Dmat[0,1,k] = Young2 * Poisson1 / (1 - Poisson1 * Poisson2)
-                Dmat[1,0,k] = Young2 * Poisson1 / (1 - Poisson1 * Poisson2)
-                Dmat[1,1,k] = Young2 * (1 - Poisson1 * Poisson2)
-                Dmat[2,2,k] = GL
-                
-            
-            elif condition == 2:
-                Young2= float(l[line_num].split('!')[0].replace('d','e')) #TT
-                line_num += 1
-                Poisson1= float(l[line_num].split('!')[0].replace('d','e')) #LT
-                line_num += 1
-                Poisson2= float(l[line_num].split('!')[0].replace('d','e')) #TL
-                line_num += 1
-                Poisson3= float(l[line_num].split('!')[0].replace('d','e')) #TT
-                line_num += 1
-                GL= float(l[line_num].split('!')[0].replace('d','e')) #LT
-                line_num += 1
-                
-                print('YOUNG''S MODULUS (TT) [MPa] :', Young2)
-                print('POISSON''S RATIO (LT) :', Poisson1)
-                print('POISSON''S RATIO (TL) :', Poisson2)
-                print('POISSON''S RATIO (TT) :', Poisson3)
-                print('SHEAR MODULUS (LT) [MPa] :', GL)
-                
-                Young2 *= 10**6
-                GL     *= 10**6
-                
-                #配列がpythonでは0始まりなので[0,1]は1行2列、fortranでは[1,2]とかく。
-                Dmat[0,0,k] = (1 - Poisson1 * Poisson2) * Young2 / (1 + Poisson3) / (1 - Poisson3 - 2 * Poisson1 * Poisson2)
-                Dmat[0,1,k] = (Poisson3 + Poisson1 * Poisson2) * Young2 / (1 + Poisson3) / (1 - Poisson3 - 2 * Poisson1 * Poisson2)
-                Dmat[1,0,k] = (Poisson3 + Poisson1 * Poisson2) * Young2 / (1 + Poisson3) / (1 - Poisson3 - 2 * Poisson1 * Poisson2)
-                Dmat[1,1,k] = (1 - Poisson1 * Poisson2) * Young2 / (1 + Poisson3) / (1 - Poisson3 - 2 * Poisson1 * Poisson2)
-                Dmat[2,2,k] = GL
-                
+            print('TRANSEVERSELY ISOTROPIC MATERIAL IS NOT APPLIED YET.')
+   
                 
 
 
