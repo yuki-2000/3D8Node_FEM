@@ -92,7 +92,6 @@ with open('input_AnalysisConditions.txt') as f:
     num_fix   = int(l[3].split('!')[0]) #拘束点数
     num_force = int(l[4].split('!')[0]) #荷重点数
     amp       = float(l[5].split('!')[0].replace('d','e')) #変形図倍率
-    thickness = float(l[6].split('!')[0].replace('d','e')) #モデル厚さ
 
 
 
