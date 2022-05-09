@@ -734,11 +734,12 @@ lap_time = time.time()
 # displacement (NUM_NODE, AMP, node, Umat)
 
 
-disp = np.zeros((num_node, 2), dtype=np.float64)  #amp倍した変位後の座標
+disp = np.zeros((num_node, 3), dtype=np.float64)  #amp倍した変位後の座標
 
 
-disp[:,0] = node[:,0] + Umat[0::2] * amp
-disp[:,1] = node[:,1] + Umat[1::2] * amp
+disp[:,0] = node[:,0] + Umat[0::3] * amp
+disp[:,1] = node[:,1] + Umat[1::3] * amp
+disp[:,2] = node[:,2] + Umat[2::3] * amp
 
 #output省略
 
