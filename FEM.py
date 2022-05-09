@@ -789,8 +789,10 @@ for i in range(num_eleme):
     for j in range(len(gauss_nodes)):
         AVEstrain[i,:] += GAUSSstrain[i,j,:]
         AVEstress[i,:] += GAUSSstress[i,j,:]
-    AVEstrain[i,:] /= 8
-    AVEstress[i,:] /= 8
+        
+
+    AVEstrain[i,:] /= len(gauss_nodes)
+    AVEstress[i,:] /= len(gauss_nodes)
 
 
 
@@ -821,61 +823,10 @@ lap_time = time.time()
 
 
 
-#https://stackoverflow.com/questions/52202014/how-can-i-plot-2d-fem-results-using-matplotlib
-
-
-import matplotlib.pyplot as plt
-import matplotlib.collections
-import numpy as np
-
-
-def showMeshPlot(nodes, elements, values, title):
-
-    y = nodes[:,0]
-    z = nodes[:,1]
-
-    def quatplot(y,z, quatrangles, values, ax=None, **kwargs):
-
-        if not ax: ax=plt.gca()
-        yz = np.c_[y,z]
-        verts= yz[quatrangles]
-        pc = matplotlib.collections.PolyCollection(verts, **kwargs)
-        pc.set_array(values)
-        ax.add_collection(pc)
-        ax.autoscale()
-        return pc
-
-    fig, ax = plt.subplots(dpi=500)
-    ax.set_aspect('equal')
-
-    pc = quatplot(y,z, np.asarray(elements), values, ax=ax, 
-             edgecolor="black", cmap="rainbow",linewidths=(0.1,))
-    fig.colorbar(pc, ax=ax)        
-    #ax.plot(y,z, marker="o", ls="", color="black")
-
-    ax.set(title=title, xlabel='X Axis', ylabel='Y Axis')
-
-    plt.show()
-    #fig.savefig(f'result_{title}.png')
-
-
-
-
-
-
-
 #可視化
 #https://qiita.com/itotomball/items/e63039d186fa1f564513
 
 
-showMeshPlot(nodes=node, elements=eleme-1, values=np.zeros(num_eleme), title = 'mesh')
-
-
-result_list = (('strain_x', AVEstrain[:,0]),('strain_y', AVEstrain[:,1]),('strain_xy', AVEstrain[:,2]),('stress_x', AVEstress[:,0]),('stress_y', AVEstress[:,1]),('stress_xy', AVEstress[:,2]))
-for title, C in result_list:
-
-    #接点番号は1から、pythonの行番号は0から始まるので修正
-    showMeshPlot(nodes=disp, elements=eleme-1, values=C, title = title)
     
 
 for matrix_name in["Kmat", "K11", "K12", "K22"] :
