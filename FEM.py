@@ -421,12 +421,12 @@ lap_time = time.time()
 
 
 #配列の初期化
-Kmat   = np.zeros((2*num_node,2*num_node), dtype=np.float64) #全体剛性マトリックス
+Kmat   = np.zeros((3*num_node,3*num_node), dtype=np.float64) #全体剛性マトリックス
 
 
 for i in range(num_eleme):
     
-    e_Kmat = np.zeros((8,8), dtype=np.float64)  #要素剛性マトリックス
+    e_Kmat = np.zeros((24,24), dtype=np.float64)  #要素剛性マトリックス
 
     for j in range(len(gauss_nodes)): #各ガウスの積分点を代入した時
     
@@ -434,7 +434,7 @@ for i in range(num_eleme):
         #一発で、メモリのほんのちょっとの節約
         #material[i]は、i要素の素材番号1始まりだが、Dmatの格納場所は0なので注意
         #ガウスの積分点の個数だけ足されていることに注意
-        e_Kmat += det_Jacobi[i,j] * thickness * Bmat[:,:,i,j].T @ Dmat[:,:,material[i]-1] @ Bmat[:,:,i,j]
+        e_Kmat += det_Jacobi[i,j] * Bmat[:,:,i,j].T @ Dmat[:,:,material[i]-1] @ Bmat[:,:,i,j]
     
     
     
@@ -443,23 +443,18 @@ for i in range(num_eleme):
     #全体剛性マトリックスへの組込み P.137 式(5.97)
 
     #ここもっと行列計算したい
-    for j in range(4):
-        for k in range(4):
+    for j in range(8):
+        for k in range(8):
 
             #eleme[i,j]は接点番号であり、pythonにおける配列位置にするためには-1する必要があると思ったが、
             #Kmatの式の作り方からやめておく
             pt1 = eleme[i,j] #-1 #行
             pt2 = eleme[i,k] #-1 #列
             
-            #[2x2]の成分ごとに組込み
-            #j,lがpythonでは0スタートなので-1を消したり+2を+1にしたり
-            #Kmat[2*(pt1-1), 2*(pt2-1)] += e_Kmat[2*j, 2*k]
-            #Kmat[2*(pt1-1), 2*(pt2-1)+1] += e_Kmat[2*j, 2*k+1]
-            #Kmat[2*(pt1-1)+1, 2*(pt2-1)] += e_Kmat[2*j+1, 2*k]
-            #Kmat[2*(pt1-1)+1, 2*(pt2-1)+1] += e_Kmat[2*j+1, 2*k+1]
-            
+
+            #[3x3]の成分ごとに組込み
             #1行でできる
-            Kmat[2*(pt1-1):2*(pt1-1)+2, 2*(pt2-1):2*(pt2-1)+2] += e_Kmat[2*j:2*j+2, 2*k:2*k+2]
+            Kmat[3*(pt1-1):3*(pt1-1)+3, 3*(pt2-1):3*(pt2-1)+3] += e_Kmat[3*j:3*j+3, 3*k:3*k+3]
 
 #疎行列に変換
 #Kmat = coo_matrix(Kmat).tolil()
