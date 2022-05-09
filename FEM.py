@@ -293,29 +293,37 @@ lap_time = time.time()
 
 
 #配列の初期化
-#ξ:xi η:eta
-Bmat      = np.zeros((3,8,num_eleme,4), dtype=np.float64) #Bマトリックス（形状関数の偏微分） #ただしすでにガウス積分点代入済み 4はガウスの積分店の個数
-Hmat      = np.zeros((2,4), dtype=np.float64) #dN/d(xi),dN/d(eta)を成分に持つ行列（xi,etaにはガウスの積分点を代入）　あるガウス積分点における値
-det_Jacobi       = np.zeros((num_eleme,4), dtype=np.float64) #ガウスの積分点におけるヤコビアン（ヤコビ行列の行列式)
-gauss_nodes     = np.zeros((4,2), dtype=np.float64) #ガウスの積分点(polarと同じように左下から反時計)
-polar     = np.zeros((4,2), dtype=np.float64) #要素座標(xi,eta)における節点座標　左下から反時計
-Jacobi    = np.zeros((2,2), dtype=np.float64) #ヤコビ行列 (ガウスの積分点代入済み)
-Jacobiinv = np.zeros((2,2), dtype=np.float64) #ヤコビ行列の逆行列
-dNdxy     = np.zeros((2,4), dtype=np.float64) #dN/dx,dN/dyを成分に持つ行列 行がxy列が形状関数N Hmat、Jacobiinvともにあるガウスの積分点代入済みのため、これもガウスの積分点代入済み
-e_node    = np.zeros((4,2), dtype=np.float64) #ある四角形elementを構成する4接点のxy座標　#e_pointから戻した。
+#ξ:xi η:eta ζ:zeta
+Bmat      = np.zeros((6,24,num_eleme,8), dtype=np.float64) #Bマトリックス（形状関数の偏微分） #ただしすでにガウス積分点代入済み 8はガウスの積分点の個数
+Hmat      = np.zeros((3,8), dtype=np.float64) #dN/d(xi),dN/d(eta),dN/d(zeta)を成分に持つ行列（xi,eta,zetaにはガウスの積分点を代入）　あるガウス積分点における値
+det_Jacobi       = np.zeros((num_eleme,8), dtype=np.float64) #ガウスの積分点におけるヤコビアン（ヤコビ行列の行列式)
+gauss_nodes     = np.zeros((8,3), dtype=np.float64) #ガウスの積分点(polarと同じように左下から反時計)
+polar     = np.zeros((8,3), dtype=np.float64) #要素座標(xi,eta,zeta)における節点座標　左下から反時計
+Jacobi    = np.zeros((3,3), dtype=np.float64) #ヤコビ行列 (ガウスの積分点代入済み)
+Jacobiinv = np.zeros((3,3), dtype=np.float64) #ヤコビ行列の逆行列
+dNdxy     = np.zeros((3,8), dtype=np.float64) #dN/dx,dN/dy,dN/dzを成分に持つ行列 行がxyz列が形状関数N Hmat、Jacobiinvともにあるガウスの積分点代入済みのため、これもガウスの積分点代入済み
+e_node    = np.zeros((8,3), dtype=np.float64) #ある四角形elementを構成する4接点のxy座標　#e_pointから戻した。
 
 
 #ガウスの積分点 左下から
-gauss_nodes = np.array([[-1/np.sqrt(3), -1/np.sqrt(3)],
-                        [ 1/np.sqrt(3), -1/np.sqrt(3)],
-                        [ 1/np.sqrt(3),  1/np.sqrt(3)],
-                        [-1/np.sqrt(3),  1/np.sqrt(3)]])
+gauss_nodes = np.array([[-1/np.sqrt(3), -1/np.sqrt(3), -1/np.sqrt(3)],
+                        [ 1/np.sqrt(3), -1/np.sqrt(3), -1/np.sqrt(3)],
+                        [ 1/np.sqrt(3),  1/np.sqrt(3), -1/np.sqrt(3)],
+                        [-1/np.sqrt(3),  1/np.sqrt(3), -1/np.sqrt(3)],
+                        [-1/np.sqrt(3), -1/np.sqrt(3),  1/np.sqrt(3)],
+                        [ 1/np.sqrt(3), -1/np.sqrt(3),  1/np.sqrt(3)],
+                        [ 1/np.sqrt(3),  1/np.sqrt(3),  1/np.sqrt(3)],
+                        [-1/np.sqrt(3),  1/np.sqrt(3),  1/np.sqrt(3)]])
 
 #自然座標での４点、左下から
-polar = np.array([[-1, -1],
-                  [ 1, -1],
-                  [ 1,  1],
-                  [-1,  1]])
+polar = np.array([[-1, -1, -1],
+                  [ 1, -1, -1],
+                  [ 1,  1, -1],
+                  [-1,  1, -1],
+                  [-1, -1,  1],
+                  [ 1, -1,  1],
+                  [ 1,  1,  1],
+                  [-1,  1,  1]])
 
 
 
@@ -331,24 +339,22 @@ polar = np.array([[-1, -1],
 #配列0始まりに変更
 #eleme[i,j]は接点番号であり、pythonにおける配列位置にするためには-1する必要あり
 for i in range(num_eleme):
-    for j in range(4): #節点の4
+    for j in range(8): #節点の8
         e_node[j,0] = node[eleme[i,j]-1,0]
         e_node[j,1] = node[eleme[i,j]-1,1]
+        e_node[j,2] = node[eleme[i,j]-1,2]
     
    
     for j in range(len(gauss_nodes)): #各ガウスの積分点を代入した時
-        for k in range(4): #各接点の4
+        for k in range(8): #各接点の8
             #pythonは0スタート
             #Nは(ξ,η)て定義、4節点に対応するNの偏微分に、ある積分点を代入
-            Hmat[0,k] = polar[k,0] * (1 + polar[k,1] * gauss_nodes[j,1]) * 0.25
-            Hmat[1,k] = polar[k,1] * (1 + polar[k,0] * gauss_nodes[j,0]) * 0.25
+            Hmat[0,k] = polar[k,0] * (1 + polar[k,1] * gauss_nodes[j,1]) * (1 + polar[k,2] * gauss_nodes[j,2]) /8
+            Hmat[1,k] = polar[k,1] * (1 + polar[k,0] * gauss_nodes[j,0]) * (1 + polar[k,2] * gauss_nodes[j,2]) /8
+            Hmat[2,k] = polar[k,2] * (1 + polar[k,0] * gauss_nodes[j,0]) * (1 + polar[k,1] * gauss_nodes[j,1]) /8
         
         
-        #可読性最悪　ではなく、ただの行列積だった。
-        #for k in range(2):
-            #for l in range(2):
-                #for m in range(4):
-                    #Jacobi[k,l] += Hmat[k,m] * e_node[m,l]
+
         
         #p220-221 ただしガウスの積分点代入済み
         Jacobi = Hmat @ e_node
@@ -362,20 +368,10 @@ for i in range(num_eleme):
             print("gauss:", j)
             
         
-        #初歩的な線形代数の逆行列　ライブラリでやるか？ 
-        #p220 B.25
-        #Jacobiinv[0,0] = Jacobi[1,1] / det_Jacobi[i,j]
-        #Jacobiinv[0,1] = -1 * Jacobi[0,1] / det_Jacobi[i,j]
-        #Jacobiinv[1,0] = -1 * Jacobi[1,0] / det_Jacobi[i,j]
-        #Jacobiinv[1,1] = Jacobi[0,0] / det_Jacobi[i,j]
-        
+       
         Jacobiinv = np.linalg.inv(Jacobi)
         
-        
-        #for k in range(2):
-            #for l in range(4):
-                #for m in range(2):
-                    #dNdxy[k,l] += Jacobiinv[k,m] * Hmat[m,l]
+
         #p222らへん            
         dNdxy = Jacobiinv @ Hmat
         
@@ -387,10 +383,15 @@ for i in range(num_eleme):
             #Bmat[2,2*k,i,j] = dNdxy[1,k]
             #Bmat[2,2*k+1,i,j] = dNdxy[0,k]
             
-        Bmat[0,::2, i,j] = dNdxy[0,:]
-        Bmat[1,1::2,i,j] = dNdxy[1,:]
-        Bmat[2,::2, i,j] = dNdxy[1,:]
-        Bmat[2,1::2,i,j] = dNdxy[0,:]
+        Bmat[0,::3, i,j] = dNdxy[0,:]
+        Bmat[1,1::3,i,j] = dNdxy[1,:]
+        Bmat[2,2::3,i,j] = dNdxy[2,:]
+        Bmat[3,1::3,i,j] = dNdxy[2,:]
+        Bmat[3,2::3,i,j] = dNdxy[1,:]
+        Bmat[4,::3, i,j] = dNdxy[2,:]
+        Bmat[4,2::3,i,j] = dNdxy[0,:]
+        Bmat[5,::3, i,j] = dNdxy[1,:]
+        Bmat[5,1::3,i,j] = dNdxy[0,:]
         
         
 
