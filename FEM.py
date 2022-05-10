@@ -92,7 +92,6 @@ with open('input_AnalysisConditions.txt') as f:
     num_fix   = int(l[3].split('!')[0]) #拘束点数
     num_force = int(l[4].split('!')[0]) #荷重点数
     amp       = float(l[5].split('!')[0].replace('d','e')) #変形図倍率
-    thickness = float(l[6].split('!')[0].replace('d','e')) #モデル厚さ
 
 
 
@@ -120,8 +119,8 @@ with open('input_AnalysisConditions.txt') as f:
 
 #node = np.zeros((num_node,2),dtype=np.float64)
 #emptyのほうがより高速だが、初期化されない
-node      = np.empty((num_node,2), dtype=np.float64) #節点座標
-eleme     = np.empty((num_eleme,4),dtype=np.int32) #各要素のコネクティビティ #つまりある四角形elementを構成する接点node番号(1スタートに注意)
+node      = np.empty((num_node,3), dtype=np.float64) #節点座標
+eleme     = np.empty((num_eleme,8),dtype=np.int32) #各要素のコネクティビティ #つまりある四角形elementを構成する接点node番号(1スタートに注意)
 material  = np.empty((num_eleme),dtype=np.int32) #各要素の素材番号 (元と違うので注意)
 fix_pnt   = np.empty((num_fix,2),  dtype=np.int32) #変位境界条件
 force_pnt = np.empty((num_force,2),dtype=np.int32) #力学的境界条件 #接点番号と向きの配列
@@ -136,13 +135,14 @@ with open('input_point.txt') as f:
     for i, input_point in enumerate(l):
         node[i,0] = input_point.split()[1].replace('d','e')
         node[i,1] = input_point.split()[2].replace('d','e')
+        node[i,2] = input_point.split()[3].replace('d','e')
         
 #スペース区切りに変更
 with open('input_eleme.txt') as f:
 #with open('benchmark_input_eleme.txt') as f:
     l = f.readlines()
     for i, input_eleme in enumerate(l):
-        eleme[i] = input_eleme.split()[1:5]
+        eleme[i] = input_eleme.split()[1:9]
 
 #追加   
 with open('input_material.txt') as f:
@@ -190,7 +190,7 @@ lap_time = time.time()
 #makeDmat (Dmat)
 
 #配列の初期化
-Dmat = np.zeros((3,3,num_material),dtype=np.float64) #弾性剛性マトリックス
+Dmat = np.zeros((6,6,num_material),dtype=np.float64) #弾性剛性マトリックス
 
 #最悪　めちゃくちゃわかりにくい
 #ちゃんとしたデータセット形式のinput作れ
@@ -201,15 +201,7 @@ line_num = 0
 with open('input_matinfo.txt') as f:
     l = f.readlines()
     
-    condition = int(l[0].split('!')[0]) #plane stress status: 1, plane strain status: 2
-    line_num += 1
-    if condition == 1:
-        print('PLANE STRESS CONDITION')
-    elif condition == 2:
-        print('PLANE STRAIN CONDITION')
-    else:
-        print('CONDITION IS NOT APPROPRIATE.')
-        
+      
         
         
     for k in range(num_material):
@@ -239,82 +231,24 @@ with open('input_matinfo.txt') as f:
             
             
             #配列がpythonでは0始まりなので[0,1]は1行2列、fortranでは[1,2]とかく。
-            if condition == 1: #平面応力
-                Dmat[0,0,k] = Young1 / (1 - (Poisson1 ** 2))
-                Dmat[0,1,k] = Young1 / (1 - (Poisson1 ** 2)) * Poisson1
-                Dmat[1,0,k] = Young1 / (1 - (Poisson1 ** 2)) * Poisson1
-                Dmat[1,1,k] = Young1 / (1 - (Poisson1 ** 2))
-                Dmat[2,2,k] = Young1 / (1 - (Poisson1 ** 2)) * (1- Poisson1) / 2
-            elif condition == 2: #平面ひずみ
-                Dmat[0,0,k] = Young1 * (1 - Poisson1) / (1 - 2 * Poisson1) / (1 + Poisson1)
-                Dmat[0,1,k] = Young1 / (1 - 2 * Poisson1) / (1 + Poisson1) * Poisson1
-                Dmat[1,0,k] = Young1 / (1 - 2 * Poisson1) / (1 + Poisson1) * Poisson1
-                Dmat[1,1,k] = Young1 * (1 - Poisson1) / (1 - 2 * Poisson1) / (1 + Poisson1)
-                Dmat[2,2,k] = Young1 / (1 + Poisson1) / 2
+            Dmat[0,0,k] = Young1 * (1 - Poisson1) / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[1,1,k] = Young1 * (1 - Poisson1) / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[2,2,k] = Young1 * (1 - Poisson1) / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[0,1,k] = Young1 * Poisson1 / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[1,0,k] = Young1 * Poisson1 / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[1,2,k] = Young1 * Poisson1 / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[2,1,k] = Young1 * Poisson1 / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[2,0,k] = Young1 * Poisson1 / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[0,2,k] = Young1 * Poisson1 / ( 1 + Poisson1) / (1 - 2 * Poisson1)
+            Dmat[3,3,k] = Young1 / 2 / (1 + Poisson1)
+            Dmat[4,4,k] = Young1 / 2 / (1 + Poisson1)
+            Dmat[5,5,k] = Young1 / 2 / (1 + Poisson1)
         
         
         elif mat_type == 2: #Transeversely Isotropic Material　直交異方性材料、横等方性材料
             print('MATERIAL TYPE IS TRANSEVERSELY ISOTROPIC MATERIAL.')
-            
-            #Lを繊維軸方向，Tを繊維軸直交方向
-            if condition == 1:
-                Young1 = float(l[line_num].split('!')[0].replace('d','e')) #LL
-                line_num += 1
-                Young2= float(l[line_num].split('!')[0].replace('d','e')) #TT
-                line_num += 1
-                Poisson1= float(l[line_num].split('!')[0].replace('d','e')) #LT
-                line_num += 1
-                Poisson2= float(l[line_num].split('!')[0].replace('d','e')) #TL
-                line_num += 1
-                GL= float(l[line_num].split('!')[0].replace('d','e')) #LT
-                line_num += 1
-                
-                print('YOUNG''S MODULUS (LL) [MPa] :', Young1)
-                print('YOUNG''S MODULUS (TT) [MPa] :', Young2)
-                print('POISSON''S RATIO (LT) :', Poisson1)
-                print('POISSON''S RATIO (TL) :', Poisson2)
-                print('SHEAR MODULUS (LT) [MPa] :', GL)
-                
-                Young1 *= 10**6
-                Young2 *= 10**6
-                GL     *= 10**6
-                
-                #配列がpythonでは0始まりなので[0,1]は1行2列、fortranでは[1,2]とかく。
-                Dmat[0,0,k] = Young1 / (1 - Poisson1 * Poisson2)
-                Dmat[0,1,k] = Young2 * Poisson1 / (1 - Poisson1 * Poisson2)
-                Dmat[1,0,k] = Young2 * Poisson1 / (1 - Poisson1 * Poisson2)
-                Dmat[1,1,k] = Young2 * (1 - Poisson1 * Poisson2)
-                Dmat[2,2,k] = GL
-                
-            
-            elif condition == 2:
-                Young2= float(l[line_num].split('!')[0].replace('d','e')) #TT
-                line_num += 1
-                Poisson1= float(l[line_num].split('!')[0].replace('d','e')) #LT
-                line_num += 1
-                Poisson2= float(l[line_num].split('!')[0].replace('d','e')) #TL
-                line_num += 1
-                Poisson3= float(l[line_num].split('!')[0].replace('d','e')) #TT
-                line_num += 1
-                GL= float(l[line_num].split('!')[0].replace('d','e')) #LT
-                line_num += 1
-                
-                print('YOUNG''S MODULUS (TT) [MPa] :', Young2)
-                print('POISSON''S RATIO (LT) :', Poisson1)
-                print('POISSON''S RATIO (TL) :', Poisson2)
-                print('POISSON''S RATIO (TT) :', Poisson3)
-                print('SHEAR MODULUS (LT) [MPa] :', GL)
-                
-                Young2 *= 10**6
-                GL     *= 10**6
-                
-                #配列がpythonでは0始まりなので[0,1]は1行2列、fortranでは[1,2]とかく。
-                Dmat[0,0,k] = (1 - Poisson1 * Poisson2) * Young2 / (1 + Poisson3) / (1 - Poisson3 - 2 * Poisson1 * Poisson2)
-                Dmat[0,1,k] = (Poisson3 + Poisson1 * Poisson2) * Young2 / (1 + Poisson3) / (1 - Poisson3 - 2 * Poisson1 * Poisson2)
-                Dmat[1,0,k] = (Poisson3 + Poisson1 * Poisson2) * Young2 / (1 + Poisson3) / (1 - Poisson3 - 2 * Poisson1 * Poisson2)
-                Dmat[1,1,k] = (1 - Poisson1 * Poisson2) * Young2 / (1 + Poisson3) / (1 - Poisson3 - 2 * Poisson1 * Poisson2)
-                Dmat[2,2,k] = GL
-                
+            print('TRANSEVERSELY ISOTROPIC MATERIAL IS NOT APPLIED YET.')
+   
                 
 
 
@@ -359,29 +293,37 @@ lap_time = time.time()
 
 
 #配列の初期化
-#ξ:xi η:eta
-Bmat      = np.zeros((3,8,num_eleme,4), dtype=np.float64) #Bマトリックス（形状関数の偏微分） #ただしすでにガウス積分点代入済み 4はガウスの積分店の個数
-Hmat      = np.zeros((2,4), dtype=np.float64) #dN/d(xi),dN/d(eta)を成分に持つ行列（xi,etaにはガウスの積分点を代入）　あるガウス積分点における値
-det_Jacobi       = np.zeros((num_eleme,4), dtype=np.float64) #ガウスの積分点におけるヤコビアン（ヤコビ行列の行列式)
-gauss_nodes     = np.zeros((4,2), dtype=np.float64) #ガウスの積分点(polarと同じように左下から反時計)
-polar     = np.zeros((4,2), dtype=np.float64) #要素座標(xi,eta)における節点座標　左下から反時計
-Jacobi    = np.zeros((2,2), dtype=np.float64) #ヤコビ行列 (ガウスの積分点代入済み)
-Jacobiinv = np.zeros((2,2), dtype=np.float64) #ヤコビ行列の逆行列
-dNdxy     = np.zeros((2,4), dtype=np.float64) #dN/dx,dN/dyを成分に持つ行列 行がxy列が形状関数N Hmat、Jacobiinvともにあるガウスの積分点代入済みのため、これもガウスの積分点代入済み
-e_node    = np.zeros((4,2), dtype=np.float64) #ある四角形elementを構成する4接点のxy座標　#e_pointから戻した。
+#ξ:xi η:eta ζ:zeta
+Bmat      = np.zeros((6,24,num_eleme,8), dtype=np.float64) #Bマトリックス（形状関数の偏微分） #ただしすでにガウス積分点代入済み 8はガウスの積分点の個数
+Hmat      = np.zeros((3,8), dtype=np.float64) #dN/d(xi),dN/d(eta),dN/d(zeta)を成分に持つ行列（xi,eta,zetaにはガウスの積分点を代入）　あるガウス積分点における値
+det_Jacobi       = np.zeros((num_eleme,8), dtype=np.float64) #ガウスの積分点におけるヤコビアン（ヤコビ行列の行列式)
+gauss_nodes     = np.zeros((8,3), dtype=np.float64) #ガウスの積分点(polarと同じように左下から反時計)
+polar     = np.zeros((8,3), dtype=np.float64) #要素座標(xi,eta,zeta)における節点座標　左下から反時計
+Jacobi    = np.zeros((3,3), dtype=np.float64) #ヤコビ行列 (ガウスの積分点代入済み)
+Jacobiinv = np.zeros((3,3), dtype=np.float64) #ヤコビ行列の逆行列
+dNdxy     = np.zeros((3,8), dtype=np.float64) #dN/dx,dN/dy,dN/dzを成分に持つ行列 行がxyz列が形状関数N Hmat、Jacobiinvともにあるガウスの積分点代入済みのため、これもガウスの積分点代入済み
+e_node    = np.zeros((8,3), dtype=np.float64) #ある四角形elementを構成する4接点のxy座標　#e_pointから戻した。
 
 
 #ガウスの積分点 左下から
-gauss_nodes = np.array([[-1/np.sqrt(3), -1/np.sqrt(3)],
-                        [ 1/np.sqrt(3), -1/np.sqrt(3)],
-                        [ 1/np.sqrt(3),  1/np.sqrt(3)],
-                        [-1/np.sqrt(3),  1/np.sqrt(3)]])
+gauss_nodes = np.array([[-1/np.sqrt(3), -1/np.sqrt(3), -1/np.sqrt(3)],
+                        [ 1/np.sqrt(3), -1/np.sqrt(3), -1/np.sqrt(3)],
+                        [ 1/np.sqrt(3),  1/np.sqrt(3), -1/np.sqrt(3)],
+                        [-1/np.sqrt(3),  1/np.sqrt(3), -1/np.sqrt(3)],
+                        [-1/np.sqrt(3), -1/np.sqrt(3),  1/np.sqrt(3)],
+                        [ 1/np.sqrt(3), -1/np.sqrt(3),  1/np.sqrt(3)],
+                        [ 1/np.sqrt(3),  1/np.sqrt(3),  1/np.sqrt(3)],
+                        [-1/np.sqrt(3),  1/np.sqrt(3),  1/np.sqrt(3)]])
 
 #自然座標での４点、左下から
-polar = np.array([[-1, -1],
-                  [ 1, -1],
-                  [ 1,  1],
-                  [-1,  1]])
+polar = np.array([[-1, -1, -1],
+                  [ 1, -1, -1],
+                  [ 1,  1, -1],
+                  [-1,  1, -1],
+                  [-1, -1,  1],
+                  [ 1, -1,  1],
+                  [ 1,  1,  1],
+                  [-1,  1,  1]])
 
 
 
@@ -397,24 +339,22 @@ polar = np.array([[-1, -1],
 #配列0始まりに変更
 #eleme[i,j]は接点番号であり、pythonにおける配列位置にするためには-1する必要あり
 for i in range(num_eleme):
-    for j in range(4): #節点の4
+    for j in range(8): #節点の8
         e_node[j,0] = node[eleme[i,j]-1,0]
         e_node[j,1] = node[eleme[i,j]-1,1]
+        e_node[j,2] = node[eleme[i,j]-1,2]
     
    
     for j in range(len(gauss_nodes)): #各ガウスの積分点を代入した時
-        for k in range(4): #各接点の4
+        for k in range(8): #各接点の8
             #pythonは0スタート
             #Nは(ξ,η)て定義、4節点に対応するNの偏微分に、ある積分点を代入
-            Hmat[0,k] = polar[k,0] * (1 + polar[k,1] * gauss_nodes[j,1]) * 0.25
-            Hmat[1,k] = polar[k,1] * (1 + polar[k,0] * gauss_nodes[j,0]) * 0.25
+            Hmat[0,k] = polar[k,0] * (1 + polar[k,1] * gauss_nodes[j,1]) * (1 + polar[k,2] * gauss_nodes[j,2]) /8
+            Hmat[1,k] = polar[k,1] * (1 + polar[k,0] * gauss_nodes[j,0]) * (1 + polar[k,2] * gauss_nodes[j,2]) /8
+            Hmat[2,k] = polar[k,2] * (1 + polar[k,0] * gauss_nodes[j,0]) * (1 + polar[k,1] * gauss_nodes[j,1]) /8
         
         
-        #可読性最悪　ではなく、ただの行列積だった。
-        #for k in range(2):
-            #for l in range(2):
-                #for m in range(4):
-                    #Jacobi[k,l] += Hmat[k,m] * e_node[m,l]
+
         
         #p220-221 ただしガウスの積分点代入済み
         Jacobi = Hmat @ e_node
@@ -428,20 +368,10 @@ for i in range(num_eleme):
             print("gauss:", j)
             
         
-        #初歩的な線形代数の逆行列　ライブラリでやるか？ 
-        #p220 B.25
-        #Jacobiinv[0,0] = Jacobi[1,1] / det_Jacobi[i,j]
-        #Jacobiinv[0,1] = -1 * Jacobi[0,1] / det_Jacobi[i,j]
-        #Jacobiinv[1,0] = -1 * Jacobi[1,0] / det_Jacobi[i,j]
-        #Jacobiinv[1,1] = Jacobi[0,0] / det_Jacobi[i,j]
-        
+       
         Jacobiinv = np.linalg.inv(Jacobi)
         
-        
-        #for k in range(2):
-            #for l in range(4):
-                #for m in range(2):
-                    #dNdxy[k,l] += Jacobiinv[k,m] * Hmat[m,l]
+
         #p222らへん            
         dNdxy = Jacobiinv @ Hmat
         
@@ -453,10 +383,15 @@ for i in range(num_eleme):
             #Bmat[2,2*k,i,j] = dNdxy[1,k]
             #Bmat[2,2*k+1,i,j] = dNdxy[0,k]
             
-        Bmat[0,::2, i,j] = dNdxy[0,:]
-        Bmat[1,1::2,i,j] = dNdxy[1,:]
-        Bmat[2,::2, i,j] = dNdxy[1,:]
-        Bmat[2,1::2,i,j] = dNdxy[0,:]
+        Bmat[0,::3, i,j] = dNdxy[0,:]
+        Bmat[1,1::3,i,j] = dNdxy[1,:]
+        Bmat[2,2::3,i,j] = dNdxy[2,:]
+        Bmat[3,1::3,i,j] = dNdxy[2,:]
+        Bmat[3,2::3,i,j] = dNdxy[1,:]
+        Bmat[4,::3, i,j] = dNdxy[2,:]
+        Bmat[4,2::3,i,j] = dNdxy[0,:]
+        Bmat[5,::3, i,j] = dNdxy[1,:]
+        Bmat[5,1::3,i,j] = dNdxy[0,:]
         
         
 
@@ -486,12 +421,12 @@ lap_time = time.time()
 
 
 #配列の初期化
-Kmat   = np.zeros((2*num_node,2*num_node), dtype=np.float64) #全体剛性マトリックス
+Kmat   = np.zeros((3*num_node,3*num_node), dtype=np.float64) #全体剛性マトリックス
 
 
 for i in range(num_eleme):
     
-    e_Kmat = np.zeros((8,8), dtype=np.float64)  #要素剛性マトリックス
+    e_Kmat = np.zeros((24,24), dtype=np.float64)  #要素剛性マトリックス
 
     for j in range(len(gauss_nodes)): #各ガウスの積分点を代入した時
     
@@ -499,7 +434,7 @@ for i in range(num_eleme):
         #一発で、メモリのほんのちょっとの節約
         #material[i]は、i要素の素材番号1始まりだが、Dmatの格納場所は0なので注意
         #ガウスの積分点の個数だけ足されていることに注意
-        e_Kmat += det_Jacobi[i,j] * thickness * Bmat[:,:,i,j].T @ Dmat[:,:,material[i]-1] @ Bmat[:,:,i,j]
+        e_Kmat += det_Jacobi[i,j] * Bmat[:,:,i,j].T @ Dmat[:,:,material[i]-1] @ Bmat[:,:,i,j]
     
     
     
@@ -508,23 +443,18 @@ for i in range(num_eleme):
     #全体剛性マトリックスへの組込み P.137 式(5.97)
 
     #ここもっと行列計算したい
-    for j in range(4):
-        for k in range(4):
+    for j in range(8):
+        for k in range(8):
 
             #eleme[i,j]は接点番号であり、pythonにおける配列位置にするためには-1する必要があると思ったが、
             #Kmatの式の作り方からやめておく
             pt1 = eleme[i,j] #-1 #行
             pt2 = eleme[i,k] #-1 #列
             
-            #[2x2]の成分ごとに組込み
-            #j,lがpythonでは0スタートなので-1を消したり+2を+1にしたり
-            #Kmat[2*(pt1-1), 2*(pt2-1)] += e_Kmat[2*j, 2*k]
-            #Kmat[2*(pt1-1), 2*(pt2-1)+1] += e_Kmat[2*j, 2*k+1]
-            #Kmat[2*(pt1-1)+1, 2*(pt2-1)] += e_Kmat[2*j+1, 2*k]
-            #Kmat[2*(pt1-1)+1, 2*(pt2-1)+1] += e_Kmat[2*j+1, 2*k+1]
-            
+
+            #[3x3]の成分ごとに組込み
             #1行でできる
-            Kmat[2*(pt1-1):2*(pt1-1)+2, 2*(pt2-1):2*(pt2-1)+2] += e_Kmat[2*j:2*j+2, 2*k:2*k+2]
+            Kmat[3*(pt1-1):3*(pt1-1)+3, 3*(pt2-1):3*(pt2-1)+3] += e_Kmat[3*j:3*j+3, 3*k:3*k+3]
 
 #疎行列に変換
 #Kmat = coo_matrix(Kmat).tolil()
@@ -546,18 +476,18 @@ lap_time = time.time()
 
 # makeFmat (NUM_NODE, NUM_FORCE, Fmat, force_pnt, force)
 
-Fmat = np.zeros((2*num_node), dtype=np.float64) #節点荷重ベクトル
+Fmat = np.zeros((3*num_node), dtype=np.float64) #節点荷重ベクトル
 
 #unknown_DOFをつかってファンシーインデックスにしたほうが早い
 for i in range(num_force):
     #force_pnt[i,1]は接点番号であり、pythonにおける配列位置にするために変更、
     #各接点のx,yの順に配列が並んでいるので、xは+1、yは+2が割り振られうまく位置を計算している。
     #pythonの配列番号0始まりに変更
-    Fmat[2*(force_pnt[i,0]-1) + force_pnt[i,1] -1] = force[i]
+    Fmat[3*(force_pnt[i,0]-1) + force_pnt[i,1] -1] = force[i]
     
-    if (force_pnt[i,1] != 1 and force_pnt[i,1] != 2):
+    if (force_pnt[i,1] != 1 and force_pnt[i,1] != 2 and force_pnt[i,1] != 3):
         print('INPUT DATA "input_forcednodes.txt" IS NOT APPROPREATE.')
-        print('load direction is now',force_pnt[i,2], ', not 1(x) or 2(y)' )
+        print('load direction is now',force_pnt[i,1], ', not 1(x) or 2(y) or 3(z)' )
         break
  
 
@@ -580,7 +510,7 @@ for i in range(num_force):
 
 
 
-Umat = np.zeros((2*num_node), dtype=np.float64)
+Umat = np.zeros((3*num_node), dtype=np.float64)
 
 
 #known_DOFをつかってファンシーインデックスにしたほうが早い
@@ -588,11 +518,11 @@ for i in range(num_fix):
     #fix_pnt[i,1]は接点番号であり、pythonにおける配列位置にするために変更、
     #各接点のx,yの順に配列が並んでいるので、xは+1、yは+2が割り振られうまく位置を計算している。
     #pythonの配列番号0始まりに変更
-    Umat[2*(fix_pnt[i,0]-1) + fix_pnt[i,1] -1] = fix[i]
+    Umat[3*(fix_pnt[i,0]-1) + fix_pnt[i,1] -1] = fix[i]
     
-    if (fix_pnt[i,1] != 1 and fix_pnt[i,1] != 2):
+    if (fix_pnt[i,1] != 1 and fix_pnt[i,1] != 2 and force_pnt[i,1] != 3):
         print('IINPUT DATA "input_fixednodes.txt" IS NOT APPROPREATE.')
-        print('Fixed direction is now', fix_pnt[i,2], ', not 1(x) or 2(y)' )
+        print('Fixed direction is now', fix_pnt[i,1], ', not 1(x) or 2(y) or 3(z)' )
         break
 
 
@@ -614,16 +544,16 @@ for i in range(num_fix):
 
 #境界条件適用後の小行列を作成
 known_DOF   = np.empty(num_fix, dtype=np.int32)              #既知節点変位ベクトルの自由度  #既知接点変位の行番号であり、未知荷重行に対応
-unknown_DOF = np.empty(2*num_node - num_fix, dtype=np.int32) #未知節点変位ベクトルの自由度
+unknown_DOF = np.empty(3*num_node - num_fix, dtype=np.int32) #未知節点変位ベクトルの自由度
 
-K11 = np.zeros((2*num_node-num_fix, 2*num_node-num_fix), dtype=np.float64) #変位境界条件付加後の小行列
-K12 = np.zeros((2*num_node-num_fix, num_fix), dtype=np.float64)            #変位境界条件付加後の小行列 #K21の転置
+K11 = np.zeros((3*num_node-num_fix, 3*num_node-num_fix), dtype=np.float64) #変位境界条件付加後の小行列
+K12 = np.zeros((3*num_node-num_fix, num_fix), dtype=np.float64)            #変位境界条件付加後の小行列 #K21の転置
 K22 = np.zeros((num_fix, num_fix), dtype=np.float64)                       #変位境界条件付加後の小行列
 
 
-F1  = np.zeros((2*num_node-num_fix), dtype=np.float64)                     #変位境界条件付加後の小行列 #与えられる
+F1  = np.zeros((3*num_node-num_fix), dtype=np.float64)                     #変位境界条件付加後の小行列 #与えられる
 F2  = np.zeros(num_fix, dtype=np.float64)                                  #変位境界条件付加後の小行列
-U1  = np.zeros((2*num_node-num_fix), dtype=np.float64)                     #変位境界条件付加後の小行列
+U1  = np.zeros((3*num_node-num_fix), dtype=np.float64)                     #変位境界条件付加後の小行列
 U2  = np.zeros(num_fix, dtype=np.float64)                                  #変位境界条件付加後の小行列　#与えられる
 
 
@@ -631,32 +561,15 @@ U2  = np.zeros(num_fix, dtype=np.float64)                                  #変�
 ##既知接点変位の行番号配列作成
 #pythonの配列番号0始まりに変更
 #各接点のx,yの順に配列が並んでいるので、xは+1、yは+2が割り振られうまく位置を計算している。
-known_DOF = 2*(fix_pnt[:,0]-1) + fix_pnt[:,1] -1
+known_DOF = 3*(fix_pnt[:,0]-1) + fix_pnt[:,1] -1
 
 
-"""
-#何やっているかわからないが、おそらく決まっていない行番号の一覧を作成
-DO j=1, known_DOF(1)-1
-  unknown_DOF(j) = j
-END DO
 
-
-DO i=2, NUM_FIX
-  DO j=known_DOF(i-1)+1, known_DOF(i)-1
-    unknown_DOF(j-(i-1)) = j
-  END DO
-END DO
-
-
-DO j=known_DOF(NUM_FIX)+1, 2*NUM_NODE
-  unknown_DOF(j-NUM_FIX) = j
-END DO
-"""
 
 
 #すべての行番号の中から、known_DOFの行番号のインデックスを削除
 #unknown_DOFのインデックスと値が一致しているためこう書くが、本質はknown_DOFの行番号の値を削除。
-unknown_DOF = np.array(range(2*num_node))
+unknown_DOF = np.array(range(3*num_node))
 unknown_DOF = np.delete(unknown_DOF, known_DOF)
         
 
@@ -821,11 +734,12 @@ lap_time = time.time()
 # displacement (NUM_NODE, AMP, node, Umat)
 
 
-disp = np.zeros((num_node, 2), dtype=np.float64)  #amp倍した変位後の座標
+disp = np.zeros((num_node, 3), dtype=np.float64)  #amp倍した変位後の座標
 
 
-disp[:,0] = node[:,0] + Umat[0::2] * amp
-disp[:,1] = node[:,1] + Umat[1::2] * amp
+disp[:,0] = node[:,0] + Umat[0::3] * amp
+disp[:,1] = node[:,1] + Umat[1::3] * amp
+disp[:,2] = node[:,2] + Umat[2::3] * amp
 
 #output省略
 
@@ -847,23 +761,24 @@ lap_time = time.time()
 # distribution (NUM_NODE, NUM_ELEME, eleme, Bmat, Dmat, Umat)
 
 #念のため残しておく。
-AVEstrain = np.zeros((num_eleme,3), dtype=np.float64)  #各四角形の平均ひずみ(εx,εy,γxy)
-AVEstress = np.zeros((num_eleme,3), dtype=np.float64)  #各四角形の平均応力(σx,σy,τxy)
+AVEstrain = np.zeros((num_eleme,6), dtype=np.float64)  #各六面体の平均ひずみ(εx,εy,εz,γxy,γyz,γzx)
+AVEstress = np.zeros((num_eleme,6), dtype=np.float64)  #各六面体の平均応力(σx,σy,σz,τxy,τyz,τzx)
 
-GAUSSstrain = np.zeros((num_eleme,4,3), dtype=np.float64) #各ガウスの積分点におけるひずみ。四角形では要素内で一定でない。
-GAUSSstress = np.zeros((num_eleme,4,3), dtype=np.float64)
-NODALstrain = np.zeros((num_eleme,4,3), dtype=np.float64) #各節点におけるひずみ
-NODALstress = np.zeros((num_eleme,4,3), dtype=np.float64)
-Nmat        = np.zeros((4,4), dtype=np.float64)   #行:各積分点　列:各形状関数N　に対応した行列。
+GAUSSstrain = np.zeros((num_eleme,8,6), dtype=np.float64) #各ガウスの積分点におけるひずみ。六面体では要素内で一定でない。
+GAUSSstress = np.zeros((num_eleme,8,6), dtype=np.float64)
+NODALstrain = np.zeros((num_eleme,8,6), dtype=np.float64) #各節点におけるひずみ
+NODALstress = np.zeros((num_eleme,8,6), dtype=np.float64)
+Nmat        = np.zeros((8,8), dtype=np.float64)   #行:各積分点　列:各形状関数N　に対応した行列。
 
 
-e_Umat = np.empty(8, dtype=np.float64)               #ある四角形要素の変位
+e_Umat = np.empty(24, dtype=np.float64)               #ある六面体要素の変位
 
 
 for i in range(num_eleme):
-    for j in range(4): #四角形の4
-        e_Umat[2*j]   = Umat[2*(eleme[i,j]-1)]     #四角形要素のx変位
-        e_Umat[2*j+1] = Umat[2*(eleme[i,j]-1)+1]   #四角形要素のy変位
+    for j in range(8): #六面体の8
+        e_Umat[3*j]   = Umat[3*(eleme[i,j]-1)]     #六面体要素のx変位
+        e_Umat[3*j+1] = Umat[3*(eleme[i,j]-1)+1]   #六面体要素のy変位
+        e_Umat[3*j+2] = Umat[3*(eleme[i,j]-1)+2]   #六面体要素のz変位
         
     for j in range(len(gauss_nodes)): #各ガウスの積分点を代入した時
         GAUSSstrain[i,j,:] = Bmat[:,:,i,j] @ e_Umat
@@ -874,19 +789,21 @@ for i in range(num_eleme):
     for j in range(len(gauss_nodes)):
         AVEstrain[i,:] += GAUSSstrain[i,j,:]
         AVEstress[i,:] += GAUSSstress[i,j,:]
-    AVEstrain[i,:] /= 4
-    AVEstress[i,:] /= 4
+        
+
+    AVEstrain[i,:] /= len(gauss_nodes)
+    AVEstress[i,:] /= len(gauss_nodes)
 
 
 
 #ガウスの積分点の形状関数と、ひずみ、応力から節点を求めている。
 #ひずみ、応力の要素内の分布は同じ形状関数なの？
 for i in range(num_eleme):
-    for j in range(3): #εx,εy、τxyの3
+    for j in range(6): #εx,εy,εz,γxy,γyz,γzxの6
         
         for k in range(len(gauss_nodes)):
-            for l in range(4): #形状関数4こ
-                Nmat[k,l] = 0.25 * (1 + polar[l,0] * gauss_nodes[k,0]) * (1 + polar[l,1] * gauss_nodes[k,1])
+            for l in range(8): #形状関数8こ
+                Nmat[k,l] = (1 + polar[l,0] * gauss_nodes[k,0]) * (1 + polar[l,1] * gauss_nodes[k,1]) * (1 + polar[l,2] * gauss_nodes[k,2]) /8
                 
         NODALstrain[i,:,j] = solve(Nmat, GAUSSstrain[i,:,j])
         NODALstress[i,:,j] = solve(Nmat, GAUSSstress[i,:,j])
@@ -906,61 +823,10 @@ lap_time = time.time()
 
 
 
-#https://stackoverflow.com/questions/52202014/how-can-i-plot-2d-fem-results-using-matplotlib
-
-
-import matplotlib.pyplot as plt
-import matplotlib.collections
-import numpy as np
-
-
-def showMeshPlot(nodes, elements, values, title):
-
-    y = nodes[:,0]
-    z = nodes[:,1]
-
-    def quatplot(y,z, quatrangles, values, ax=None, **kwargs):
-
-        if not ax: ax=plt.gca()
-        yz = np.c_[y,z]
-        verts= yz[quatrangles]
-        pc = matplotlib.collections.PolyCollection(verts, **kwargs)
-        pc.set_array(values)
-        ax.add_collection(pc)
-        ax.autoscale()
-        return pc
-
-    fig, ax = plt.subplots(dpi=500)
-    ax.set_aspect('equal')
-
-    pc = quatplot(y,z, np.asarray(elements), values, ax=ax, 
-             edgecolor="black", cmap="rainbow",linewidths=(0.1,))
-    fig.colorbar(pc, ax=ax)        
-    #ax.plot(y,z, marker="o", ls="", color="black")
-
-    ax.set(title=title, xlabel='X Axis', ylabel='Y Axis')
-
-    plt.show()
-    #fig.savefig(f'result_{title}.png')
-
-
-
-
-
-
-
 #可視化
 #https://qiita.com/itotomball/items/e63039d186fa1f564513
 
 
-showMeshPlot(nodes=node, elements=eleme-1, values=np.zeros(num_eleme), title = 'mesh')
-
-
-result_list = (('strain_x', AVEstrain[:,0]),('strain_y', AVEstrain[:,1]),('strain_xy', AVEstrain[:,2]),('stress_x', AVEstress[:,0]),('stress_y', AVEstress[:,1]),('stress_xy', AVEstress[:,2]))
-for title, C in result_list:
-
-    #接点番号は1から、pythonの行番号は0から始まるので修正
-    showMeshPlot(nodes=disp, elements=eleme-1, values=C, title = title)
     
 
 for matrix_name in["Kmat", "K11", "K12", "K22"] :
