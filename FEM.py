@@ -133,38 +133,38 @@ with open('input_point.txt') as f:
 #with open('benchmark_input_point.txt') as f:
     l = f.readlines()
     for i, input_point in enumerate(l):
-        node[i,0] = input_point.split()[1].replace('d','e')
-        node[i,1] = input_point.split()[2].replace('d','e')
-        node[i,2] = input_point.split()[3].replace('d','e')
+        node[i,0] = input_point.split(",")[1].replace('d','e')
+        node[i,1] = input_point.split(",")[2].replace('d','e')
+        node[i,2] = input_point.split(",")[3].replace('d','e')
         
 #スペース区切りに変更
 with open('input_eleme.txt') as f:
 #with open('benchmark_input_eleme.txt') as f:
     l = f.readlines()
     for i, input_eleme in enumerate(l):
-        eleme[i] = input_eleme.split()[1:9]
+        eleme[i] = input_eleme.split(",")[1:9]
 
 #追加   
 with open('input_material.txt') as f:
     l = f.readlines()
     for i, input_material in enumerate(l):
-        material[i] = input_material.split()[1]
+        material[i] = input_material.split(",")[1]
 
       
 #行の最後に文章があるので行番号を厳密に指定        
 with open('input_fixednodes.txt') as f:
     l = f.readlines()
     for i in range(num_fix):
-        fix_pnt[i] = l[i].split()[1:3]
-        fix[i] = l[i].split()[3].replace('d','e')
+        fix_pnt[i] = l[i].split(",")[1:3]
+        fix[i] = l[i].split(",")[3].replace('d','e')
         
 
 #行の最後に文章があるので行番号を厳密に指定        
 with open('input_forcednodes.txt') as f:
     l = f.readlines()
     for i in range(num_force):
-        force_pnt[i] = l[i].split()[1:3]
-        force[i] = l[i].split()[3].replace('d','e')
+        force_pnt[i] = l[i].split(",")[1:3]
+        force[i] = l[i].split(",")[3].replace('d','e')
 
 
 
@@ -520,7 +520,7 @@ for i in range(num_fix):
     #pythonの配列番号0始まりに変更
     Umat[3*(fix_pnt[i,0]-1) + fix_pnt[i,1] -1] = fix[i]
     
-    if (fix_pnt[i,1] != 1 and fix_pnt[i,1] != 2 and force_pnt[i,1] != 3):
+    if (fix_pnt[i,1] != 1 and fix_pnt[i,1] != 2 and fix_pnt[i,1] != 3):
         print('IINPUT DATA "input_fixednodes.txt" IS NOT APPROPREATE.')
         print('Fixed direction is now', fix_pnt[i,1], ', not 1(x) or 2(y) or 3(z)' )
         break
