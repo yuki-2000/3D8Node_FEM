@@ -741,6 +741,11 @@ disp[:,0] = node[:,0] + Umat[0::3] * amp
 disp[:,1] = node[:,1] + Umat[1::3] * amp
 disp[:,2] = node[:,2] + Umat[2::3] * amp
 
+
+output_disp = np.insert(disp, 0, np.arange(1, len(disp)+1), axis=1)
+np.savetxt('output_disp2.dat', output_disp, fmt=['%d', '%.10f', '%.10f', '%.10f'])
+
+
 #output省略
 
 
@@ -807,6 +812,14 @@ for i in range(num_eleme):
                 
         NODALstrain[i,:,j] = solve(Nmat, GAUSSstrain[i,:,j])
         NODALstress[i,:,j] = solve(Nmat, GAUSSstress[i,:,j])
+
+output_ave_strain = np.insert(AVEstrain, 0, np.arange(1, len(AVEstrain)+1), axis=1)
+np.savetxt('output_ave_strain2.dat', output_ave_strain, fmt=['%d','%.10f','%.10f','%.10f','%.10f','%.10f','%.10f'])
+
+output_ave_stress = np.insert(AVEstress, 0, np.arange(1, len(AVEstress)+1), axis=1)
+np.savetxt('output_ave_stress2.dat', output_ave_stress, fmt=['%d','%.10f','%.10f','%.10f','%.10f','%.10f','%.10f'])
+
+
 
 print('CALCULATE DISTRIBUTIONS')
 
