@@ -860,9 +860,9 @@ for matrix_name in["Kmat", "K11", "K12", "K22"] :
 #http://harmonizedai.com/article/%E5%A4%89%E6%95%B0%E3%81%AE%E3%83%A1%E3%83%A2%E3%83%AA%E5%86%85%E5%AE%B9%E3%82%92%E4%B8%80%E8%A6%A7%E8%A1%A8%E7%A4%BA%E3%81%97%E3%81%A6/
 
 
-print("{}{: >15}{}{: >15}{}".format('|','Variable Name','|','Memory[Byte]','|'))
-print("|---------------|---------------|")
+print("{}{: >20}{}{: >15}{}".format('|','Variable Name','|','Memory[Byte]','|'))
+print("|--------------------|---------------|")
 for var_name in dir():
     if not var_name.startswith("_"):
-        print("{}{: >15}{}{: >15}{}".format('|',var_name,'|',sys.getsizeof(eval(var_name)),'|'))
+        print("{}{: >20}{}{: >15}{}".format('|',var_name,'|',sys.getsizeof(eval(var_name)),'|'))
 
