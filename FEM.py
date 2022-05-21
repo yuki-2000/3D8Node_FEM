@@ -133,38 +133,38 @@ with open('input_point.txt') as f:
 #with open('benchmark_input_point.txt') as f:
     l = f.readlines()
     for i, input_point in enumerate(l):
-        node[i,0] = input_point.split()[1].replace('d','e')
-        node[i,1] = input_point.split()[2].replace('d','e')
-        node[i,2] = input_point.split()[3].replace('d','e')
+        node[i,0] = input_point.split(",")[1].replace('d','e')
+        node[i,1] = input_point.split(",")[2].replace('d','e')
+        node[i,2] = input_point.split(",")[3].replace('d','e')
         
 #スペース区切りに変更
 with open('input_eleme.txt') as f:
 #with open('benchmark_input_eleme.txt') as f:
     l = f.readlines()
     for i, input_eleme in enumerate(l):
-        eleme[i] = input_eleme.split()[1:9]
+        eleme[i] = input_eleme.split(",")[1:9]
 
 #追加   
 with open('input_material.txt') as f:
     l = f.readlines()
     for i, input_material in enumerate(l):
-        material[i] = input_material.split()[1]
+        material[i] = input_material.split(",")[1]
 
       
 #行の最後に文章があるので行番号を厳密に指定        
 with open('input_fixednodes.txt') as f:
     l = f.readlines()
     for i in range(num_fix):
-        fix_pnt[i] = l[i].split()[1:3]
-        fix[i] = l[i].split()[3].replace('d','e')
+        fix_pnt[i] = l[i].split(",")[1:3]
+        fix[i] = l[i].split(",")[3].replace('d','e')
         
 
 #行の最後に文章があるので行番号を厳密に指定        
 with open('input_forcednodes.txt') as f:
     l = f.readlines()
     for i in range(num_force):
-        force_pnt[i] = l[i].split()[1:3]
-        force[i] = l[i].split()[3].replace('d','e')
+        force_pnt[i] = l[i].split(",")[1:3]
+        force[i] = l[i].split(",")[3].replace('d','e')
 
 
 
@@ -520,7 +520,7 @@ for i in range(num_fix):
     #pythonの配列番号0始まりに変更
     Umat[3*(fix_pnt[i,0]-1) + fix_pnt[i,1] -1] = fix[i]
     
-    if (fix_pnt[i,1] != 1 and fix_pnt[i,1] != 2 and force_pnt[i,1] != 3):
+    if (fix_pnt[i,1] != 1 and fix_pnt[i,1] != 2 and fix_pnt[i,1] != 3):
         print('IINPUT DATA "input_fixednodes.txt" IS NOT APPROPREATE.')
         print('Fixed direction is now', fix_pnt[i,1], ', not 1(x) or 2(y) or 3(z)' )
         break
@@ -741,6 +741,11 @@ disp[:,0] = node[:,0] + Umat[0::3] * amp
 disp[:,1] = node[:,1] + Umat[1::3] * amp
 disp[:,2] = node[:,2] + Umat[2::3] * amp
 
+
+output_disp = np.insert(disp, 0, np.arange(1, len(disp)+1), axis=1)
+np.savetxt('output_disp2.dat', output_disp, fmt=['%d', '%.10f', '%.10f', '%.10f'])
+
+
 #output省略
 
 
@@ -808,6 +813,14 @@ for i in range(num_eleme):
         NODALstrain[i,:,j] = solve(Nmat, GAUSSstrain[i,:,j])
         NODALstress[i,:,j] = solve(Nmat, GAUSSstress[i,:,j])
 
+output_ave_strain = np.insert(AVEstrain, 0, np.arange(1, len(AVEstrain)+1), axis=1)
+np.savetxt('output_ave_strain2.dat', output_ave_strain, fmt=['%d','%.10f','%.10f','%.10f','%.10f','%.10f','%.10f'])
+
+output_ave_stress = np.insert(AVEstress, 0, np.arange(1, len(AVEstress)+1), axis=1)
+np.savetxt('output_ave_stress2.dat', output_ave_stress, fmt=['%d','%.10f','%.10f','%.10f','%.10f','%.10f','%.10f'])
+
+
+
 print('CALCULATE DISTRIBUTIONS')
 
 print("経過時間:", time.time() - start_time)
@@ -847,9 +860,9 @@ for matrix_name in["Kmat", "K11", "K12", "K22"] :
 #http://harmonizedai.com/article/%E5%A4%89%E6%95%B0%E3%81%AE%E3%83%A1%E3%83%A2%E3%83%AA%E5%86%85%E5%AE%B9%E3%82%92%E4%B8%80%E8%A6%A7%E8%A1%A8%E7%A4%BA%E3%81%97%E3%81%A6/
 
 
-print("{}{: >15}{}{: >15}{}".format('|','Variable Name','|','Memory[Byte]','|'))
-print("|---------------|---------------|")
+print("{}{: >20}{}{: >15}{}".format('|','Variable Name','|','Memory[Byte]','|'))
+print("|--------------------|---------------|")
 for var_name in dir():
     if not var_name.startswith("_"):
-        print("{}{: >15}{}{: >15}{}".format('|',var_name,'|',sys.getsizeof(eval(var_name)),'|'))
+        print("{}{: >20}{}{: >15}{}".format('|',var_name,'|',sys.getsizeof(eval(var_name)),'|'))
 
