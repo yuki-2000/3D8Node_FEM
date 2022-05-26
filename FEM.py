@@ -192,37 +192,29 @@ lap_time = time.time()
 #配列の初期化
 Dmat = np.zeros((6,6,num_material),dtype=np.float64) #弾性剛性マトリックス
 
-#最悪　めちゃくちゃわかりにくい
-#ちゃんとしたデータセット形式のinput作れ
 
-#readで読んでいるから
-line_num = 0
-  
-with open('input_matinfo.txt') as f:
+
+
+
+
+
+
+
+
+with open('input_material_constant.csv',encoding="utf-8") as f:
     l = f.readlines()
-    
-      
-        
-        
+    print(l)
+    l= l[1:]
     for k in range(num_material):
-        num = int(l[line_num].split('!')[0]) #MATERIAL ID  変数名変えるべき
-        line_num += 1
-        print('MATERIAL ID :', num)
-        #MATERIAL ID は1始まりだが、kは0始まりなので合わせている。
-        if num != k+1:
-            print('MATERIAL ID IS NOT APPROPRIATE.')
-            
-        
-        mat_type = int(l[line_num].split('!')[0]) #Isotropic Material: 1, Transversely Isotropic Material: 2
-        line_num += 1
+        num = int(l[k].split(",")[0]) #MATERIAL ID  変数名変えるべき
+        mat_type = int(l[k].split(",")[1]) #Isotropic Material: 1, Transversely Isotropic Material: 2
         
         if mat_type == 1: #Isotropic Material 等方材料
             print('MATERIAL TYPE IS ISOTROPIC MATERIAL.')
             
-            Young1 = float(l[line_num].split('!')[0].replace('d','e'))
-            line_num += 1
-            Poisson1 = float(l[line_num].split('!')[0].replace('d','e'))
-            line_num += 1
+            Young1 = float(l[k].split(",")[2].replace('d','e'))
+            Poisson1 = float(l[k].split(",")[3].replace('d','e'))
+
 
             print('YOUNG''S MODULUS [MPa] :', Young1)
             print('POISSON''S RATIO :', Poisson1)  
@@ -245,16 +237,77 @@ with open('input_matinfo.txt') as f:
             Dmat[5,5,k] = Young1 / 2 / (1 + Poisson1)
         
         
-        elif mat_type == 2: #Transeversely Isotropic Material　直交異方性材料、横等方性材料
+        elif mat_type == 2: #Transeversely Isotropic Material　横等方性材料
             print('MATERIAL TYPE IS TRANSEVERSELY ISOTROPIC MATERIAL.')
-            print('TRANSEVERSELY ISOTROPIC MATERIAL IS NOT APPLIED YET.')
-   
+            Young_L  = float(l[k].split(",")[2].replace('d','e')) *10**6 #MPaからPaに変更
+            nu_LT    = float(l[k].split(",")[3].replace('d','e'))    
+            Young_T  = float(l[k].split(",")[4].replace('d','e')) * 10**6 #MPaからPaに変更
+            nu_TT    = float(l[k].split(",")[5].replace('d','e'))    
+            shear_modulus_LT = float(l[k].split(",")[6].replace('d','e')) *10**6 #MPaからPaに変更
+            
+            
+            nu_TL = nu_LT * Young_T / Young_L
+            delta = 1 - (nu_TT ** 2) - 2 * nu_LT * nu_TL - 2 * nu_TT * nu_LT * nu_TL
+
+
+            #3方向（z）がL方向としてD11とかの番号降っている
+            D11 = Young_T * (1 - nu_LT * nu_TL) / delta
+            D12 = Young_T * (nu_TT + nu_LT * nu_TL) / delta
+            D13 = Young_T * nu_LT * (1 + nu_TT) / delta
+            D33 = Young_L * (1 - (nu_TT ** 2)) / delta
+            D44 = shear_modulus_LT
+            
+            #1(x)方向に繊維
+            if num == 1:                
+            	Dmat[0,0,k] = D33
+            	Dmat[1,1,k] = D11
+            	Dmat[2,2,k] = D11
+            	Dmat[0,1,k] = D13
+            	Dmat[1,0,k] = D13
+            	Dmat[1,2,k] = D12
+            	Dmat[2,1,k] = D12
+            	Dmat[2,0,k] = D13
+            	Dmat[0,2,k] = D13
+            	Dmat[3,3,k] = (D11 - D12) /2
+            	Dmat[4,4,k] = D44
+            	Dmat[5,5,k] = D44
+            #2(y)方向に繊維
+            elif num == 2:
+                Dmat[0,0,k] = D11
+                Dmat[1,1,k] = D33
+                Dmat[2,2,k] = D11
+                Dmat[0,1,k] = D13
+                Dmat[1,0,k] = D13
+                Dmat[1,2,k] = D13
+                Dmat[2,1,k] = D13
+                Dmat[2,0,k] = D12
+                Dmat[0,2,k] = D12
+                Dmat[3,3,k] = D44
+                Dmat[4,4,k] = (D11 - D12) /2
+                Dmat[5,5,k] = D44
+            #3(z)方向に繊維
+            elif num == 3:
+                Dmat[0,0,k] = D11
+                Dmat[1,1,k] = D11
+                Dmat[2,2,k] = D33
+                Dmat[0,1,k] = D12
+                Dmat[1,0,k] = D12
+                Dmat[1,2,k] = D13
+                Dmat[2,1,k] = D13
+                Dmat[2,0,k] = D13
+                Dmat[0,2,k] = D13
+                Dmat[3,3,k] = D44
+                Dmat[4,4,k] = D44
+                Dmat[5,5,k] = (D11 - D12) /2
                 
 
-
-
-
-
+            
+            
+            
+            
+            
+            
+        
 #----------------------------------
 #ouptputを今は書いていない
 
